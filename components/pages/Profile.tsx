@@ -81,7 +81,7 @@ export default function Profile() {
           </BentoCard>
 
           {/* Mistake Notebook */}
-          <BentoCard span="col-span-1 lg:col-span-2">
+          <BentoCard span="col-span-2">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-primary/20 rounded-lg">
                 <BookOpen className="w-6 h-6 text-primary" />
@@ -152,7 +152,7 @@ export default function Profile() {
           </BentoCard>
 
           {/* Badges */}
-          <BentoCard span="col-span-1 lg:col-span-3">
+          <BentoCard span="col-span-3">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-primary/20 rounded-lg">
                 <Award className="w-6 h-6 text-primary" />

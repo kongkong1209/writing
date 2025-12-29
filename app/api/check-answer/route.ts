@@ -74,20 +74,6 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error("DeepSeek API Error:", error);
-    
-    // Provide detailed error information
-    const errorMessage = error?.message || "Unknown error";
-    const errorStatus = error?.status || error?.response?.status;
-    const errorCode = error?.code;
-    
-    console.error("Error details:", {
-      message: errorMessage,
-      status: errorStatus,
-      code: errorCode,
-      apiKey: apiKey ? `${apiKey.substring(0, 10)}...` : "Missing",
-      baseURL: baseURL,
-      model: model,
-    });
 
     // Fallback: Return a mock response if API fails
     if (userAnswer && standardAnswer) {
@@ -96,7 +82,7 @@ export async function POST(req: Request) {
       const standardLower = standardAnswer.toLowerCase().trim();
       const userWords = userLower.split(/\s+/);
       const standardWords = standardLower.split(/\s+/);
-      const commonWords = userWords.filter((word) => standardWords.includes(word));
+      const commonWords = userWords.filter((word: string) => standardWords.includes(word));
       const score = Math.round((commonWords.length / Math.max(userWords.length, standardWords.length)) * 100);
 
       // Generate feedback based on score
@@ -111,21 +97,9 @@ export async function POST(req: Request) {
         feedback = "需要大量练习。请仔细对比标准答案，注意语法结构和关键词汇的使用。";
       }
 
-      // Provide more specific error information
-      let errorInfo = "";
-      if (errorStatus === 401) {
-        errorInfo = "API Key 无效或已过期";
-      } else if (errorStatus === 429) {
-        errorInfo = "请求频率过高，请稍后再试";
-      } else if (errorCode === "ENOTFOUND" || errorCode === "ECONNREFUSED") {
-        errorInfo = "网络连接失败，请检查网络设置";
-      } else {
-        errorInfo = `错误：${errorMessage}`;
-      }
-
       return NextResponse.json({
         score,
-        feedback: `[本地模式] DeepSeek API 暂时不可用（${errorInfo}）。${feedback} 相似度：${score}%`,
+        feedback: `[本地模式] DeepSeek API 暂时不可用。${feedback} 相似度：${score}%`,
         diff: [],
       });
     }

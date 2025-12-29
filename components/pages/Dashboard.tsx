@@ -41,7 +41,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Current Mission Card - Large */}
           <BentoCard
-            span="col-span-1 md:col-span-2"
+            span="col-span-2"
             className="flex flex-col md:flex-row items-center justify-between gap-6"
           >
             <div className="flex-1">
@@ -84,7 +84,7 @@ export default function Dashboard() {
           </BentoCard>
 
           {/* Daily Quote Card */}
-          <BentoCard span="col-span-1 md:col-span-2 lg:col-span-4">
+          <BentoCard span="col-span-3">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-primary/20 rounded-lg">
                 <Quote className="w-6 h-6 text-primary" />
@@ -105,7 +105,7 @@ export default function Dashboard() {
 
           {/* Quick Actions */}
           <BentoCard
-            span="col-span-1 md:col-span-2"
+            span="col-span-2"
             onClick={() => router.push("/studio")}
           >
             <div className="flex items-center justify-between">
@@ -122,7 +122,7 @@ export default function Dashboard() {
           </BentoCard>
 
           {/* Recent Progress */}
-          <BentoCard span="col-span-1 md:col-span-2">
+          <BentoCard span="col-span-2">
             <h3 className="text-lg font-bold text-text-primary mb-4">最近完成</h3>
             <div className="space-y-3">
               {[

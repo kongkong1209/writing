@@ -23,11 +23,13 @@ export default function BentoCard({
       className={`
         ${span} ${rowSpan}
         bg-surface border border-border rounded-card
-        p-6 shadow-card
-        ${onClick ? "cursor-pointer" : ""}
+        p-6
+        shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]
+        dark:shadow-card
+        ${onClick ? "cursor-pointer hover:shadow-[0_4px_16px_rgba(0,0,0,0.1),0_2px_8px_rgba(0,0,0,0.06)] dark:hover:shadow-card-hover" : ""}
         ${className}
       `}
-      whileHover={onClick ? { scale: 1.02, shadow: "card-hover" } : {}}
+      whileHover={onClick ? { scale: 1.02 } : {}}
       whileTap={onClick ? { scale: 0.98 } : {}}
       transition={{ duration: 0.2 }}
       onClick={onClick}

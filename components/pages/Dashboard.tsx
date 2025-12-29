@@ -7,29 +7,22 @@ import BentoCard from "@/components/ui/BentoCard";
 import ProgressRing from "@/components/ui/ProgressRing";
 import Button from "@/components/ui/Button";
 import StatCard from "@/components/ui/StatCard";
-import Timeline from "@/components/ui/Timeline";
-import { Flame, BookOpen, ArrowRight } from "lucide-react";
+import GrammarCard from "@/components/ui/GrammarCard";
+import { Flame, Brain, ArrowRight, Quote } from "lucide-react";
 
 export default function Dashboard() {
   const router = useRouter();
   const [currentDay] = useState(5);
   const [progress] = useState(65);
-  const [streakDays] = useState(12);
-  const [wordCount] = useState(156);
+  const [vocabMastery] = useState(156);
+  const [logicScore] = useState(82);
 
-  // Mock timeline data
-  const timelineItems = Array.from({ length: 31 }, (_, i) => ({
-    id: i + 1,
-    day: i + 1,
-    title: i < 23 ? "大作文" : "小作文",
-    type: i < 23 ? ("essay" as const) : ("letter" as const),
-    status:
-      i + 1 < currentDay
-        ? ("completed" as const)
-        : i + 1 === currentDay
-        ? ("current" as const)
-        : ("locked" as const),
-  }));
+  // Mock daily quote
+  const dailyQuote = {
+    chinese: "随着人口老龄化加剧，政府需要改革养老金制度以应对未来的财政压力。",
+    english: "As the population ages, governments need to reform pension systems to address future fiscal pressures.",
+    source: "Day 4: 老龄化",
+  };
 
   return (
     <div className="min-h-screen bg-background p-6 md:p-8">
@@ -40,33 +33,31 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-4xl font-bold text-text-primary mb-2">
-            手把手带你练写作
-          </h1>
-          <p className="text-text-secondary">Gu's Method · 雅思写作训练平台</p>
+          <h1 className="text-4xl font-bold text-text-primary mb-2">首页</h1>
+          <p className="text-text-secondary">欢迎回来，继续你的写作之旅</p>
         </motion.div>
 
         {/* Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Progress Card - Large */}
+          {/* Current Mission Card - Large */}
           <BentoCard
             span="col-span-1 md:col-span-2"
             className="flex flex-col md:flex-row items-center justify-between gap-6"
           >
             <div className="flex-1">
-              <div className="text-text-secondary text-sm mb-2">今日训练</div>
+              <div className="text-text-secondary text-sm mb-2">当前任务</div>
               <h2 className="text-2xl font-bold text-text-primary mb-4">
-                Day {currentDay}: 刑罚
+                Day {currentDay}: 律法城 (Crime)
               </h2>
               <p className="text-text-secondary mb-6">
-                通过逻辑训练和词伙练习，掌握"刑罚"主题的写作技巧
+                探索犯罪与刑罚主题，掌握相关词汇和逻辑结构，完成今日写作训练
               </p>
               <Button
                 size="lg"
-                onClick={() => router.push("/daily-practice")}
+                onClick={() => router.push("/journey")}
                 className="flex items-center gap-2"
               >
-                开始训练
+                前往律法城
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
@@ -76,8 +67,8 @@ export default function Dashboard() {
           {/* Stats */}
           <BentoCard>
             <StatCard
-              label="连续打卡"
-              value={streakDays}
+              label="词伙掌握"
+              value={vocabMastery}
               icon={<Flame className="w-5 h-5" />}
               trend="up"
             />
@@ -85,41 +76,43 @@ export default function Dashboard() {
 
           <BentoCard>
             <StatCard
-              label="词伙掌握"
-              value={wordCount}
-              icon={<BookOpen className="w-5 h-5" />}
+              label="逻辑得分"
+              value={logicScore}
+              icon={<Brain className="w-5 h-5" />}
               trend="up"
             />
           </BentoCard>
 
-          {/* Timeline Card - Full Width */}
-          <BentoCard span="col-span-1 md:col-span-2 lg:col-span-4" className="overflow-hidden">
-            <div className="mb-4">
-              <h3 className="text-xl font-bold text-text-primary mb-1">学习路线</h3>
-              <p className="text-text-secondary text-sm">
-                31天完整训练计划 · Day 1-23 大作文 · Day 24-31 小作文
-              </p>
+          {/* Daily Quote Card */}
+          <BentoCard span="col-span-1 md:col-span-2 lg:col-span-4">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/20 rounded-lg">
+                <Quote className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-bold text-text-primary">每日金句</h3>
+                  <span className="text-xs text-text-secondary">{dailyQuote.source}</span>
+                </div>
+                <GrammarCard
+                  chinese={dailyQuote.chinese}
+                  english={dailyQuote.english}
+                  explanation="这是一个典型的'随着...加剧，...需要...'的句型结构，用于描述趋势和应对措施。"
+                />
+              </div>
             </div>
-            <Timeline
-              items={timelineItems}
-              onItemClick={(item) => {
-                if (item.status === "current") {
-                  router.push("/daily-practice");
-                }
-              }}
-            />
           </BentoCard>
 
           {/* Quick Actions */}
           <BentoCard
             span="col-span-1 md:col-span-2"
-            onClick={() => router.push("/grammar-gym")}
+            onClick={() => router.push("/studio")}
           >
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-text-primary mb-2">句型特训</h3>
+                <h3 className="text-lg font-bold text-text-primary mb-2">AI 演练场</h3>
                 <p className="text-text-secondary text-sm">
-                  通过翻转卡片练习，掌握核心句型结构
+                  使用 AI 工具进行写作练习和评分
                 </p>
               </div>
               <div className="text-primary">
@@ -128,14 +121,14 @@ export default function Dashboard() {
             </div>
           </BentoCard>
 
-          {/* Recent Activity */}
+          {/* Recent Progress */}
           <BentoCard span="col-span-1 md:col-span-2">
             <h3 className="text-lg font-bold text-text-primary mb-4">最近完成</h3>
             <div className="space-y-3">
               {[
-                { day: 4, title: "老龄化", status: "已完成" },
-                { day: 3, title: "教育", status: "已完成" },
-                { day: 2, title: "环保", status: "已完成" },
+                { day: 4, title: "老龄化", status: "已完成", score: 85 },
+                { day: 3, title: "教育", status: "已完成", score: 78 },
+                { day: 2, title: "环保", status: "已完成", score: 82 },
               ].map((item, index) => (
                 <motion.div
                   key={index}
@@ -148,7 +141,9 @@ export default function Dashboard() {
                     <div className="text-text-primary font-medium">
                       Day {item.day}: {item.title}
                     </div>
-                    <div className="text-text-muted text-sm">{item.status}</div>
+                    <div className="text-text-muted text-sm">
+                      {item.status} · 得分: {item.score}
+                    </div>
                   </div>
                   <div className="w-2 h-2 bg-primary rounded-full" />
                 </motion.div>
@@ -160,4 +155,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

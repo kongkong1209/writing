@@ -1,15 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @layer base {
-  * {
-    @apply border-border;
+  :root {
+    --sidebar-width: 250px;
+    
+    /* Light mode colors (default) - Softer, less bright */
+    --color-background: #F5F5F7;
+    --color-surface: #FFFFFF;
+    --color-surface-hover: #F9FAFB;
+    --color-text-primary: #1D1D1F;
+    --color-text-secondary: #6E6E73;
+    --color-text-muted: #86868B;
+    --color-border: #D2D2D7;
+    
+    /* Light mode primary colors - Softer green */
+    --color-primary: #5B8C3A;
+    --color-primary-hover: #6B9F4A;
+    --color-primary-dark: #4A7A2F;
   }
+  
+  .dark {
+    /* Dark mode colors */
+    --color-background: #0B0C0E;
+    --color-surface: #1A1C1E;
+    --color-surface-hover: #232528;
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #9CA3AF;
+    --color-text-muted: #6B7280;
+    --color-border: #2A2D30;
+    
+    /* Dark mode primary colors - Bright fluorescent green */
+    --color-primary: #96BF48;
+    --color-primary-hover: #A8D055;
+    --color-primary-dark: #30E680;
+  }
+  
   body {
-    @apply bg-background text-text-primary font-sans antialiased;
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 

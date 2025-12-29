@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Lock, Star } from "lucide-react";
+import Link from "next/link";
+import { levelsData } from "@/lib/levels";
 
 const levels = Array.from({ length: 31 }, (_, i) => {
   const day = i + 1;
@@ -9,8 +11,10 @@ const levels = Array.from({ length: 31 }, (_, i) => {
   if (day <= 4) status = "completed";
   if (day === 5) status = "active";
 
+  // Use title from levelsData if available, otherwise use fallback
+  const levelData = levelsData[day];
   const titles = ["Aging", "Environment", "Education", "Tech", "Crime"];
-  const title = titles[(day - 1) % titles.length] || `Topic ${day}`;
+  const title = levelData?.title || titles[(day - 1) % titles.length] || `Topic ${day}`;
 
   return { day, title, status };
 });
@@ -58,46 +62,67 @@ export default function JourneyPage() {
                 >
                   {/* CARD */}
                   <div className={`w-[45%] ${isLeft ? "text-right" : "text-left"}`}>
-                    <div
-                      className={`
-                        relative inline-block w-full max-w-[280px] p-4 rounded-2xl border-b-4 transition-all duration-300 group cursor-pointer
-                        ${
-                          isActive
-                            ? "bg-white dark:bg-[#1A1C1E] border-green-500 dark:border-[#96BF48] border-b-green-600 dark:border-b-[#96BF48] shadow-lg shadow-green-200/50 dark:shadow-[0_0_30px_rgba(150,191,72,0.2)] -translate-y-1"
-                            : isCompleted
-                            ? "bg-yellow-50 dark:bg-[#1A1C1E] border-yellow-400 dark:border-yellow-600/50 border-b-yellow-500 dark:border-b-yellow-600/50"
-                            : "bg-gray-100 dark:bg-[#141517] border-gray-200 dark:border-[#2A2D30] border-b-gray-300 dark:border-b-black opacity-80 hover:opacity-100"
-                        }
-                      `}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span
-                          className={`text-xs font-bold uppercase tracking-wider ${
-                            isActive ? "text-green-600 dark:text-[#96BF48]" : "text-gray-400 dark:text-gray-500"
-                          }`}
+                    {!isLocked ? (
+                      <Link href={`/journey/${level.day}`}>
+                        <div
+                          className={`
+                            relative inline-block w-full max-w-[280px] p-4 rounded-2xl border-b-4 transition-all duration-300 group cursor-pointer
+                            ${
+                              isActive
+                                ? "bg-white dark:bg-[#1A1C1E] border-green-500 dark:border-[#96BF48] border-b-green-600 dark:border-b-[#96BF48] shadow-lg shadow-green-200/50 dark:shadow-[0_0_30px_rgba(150,191,72,0.2)] -translate-y-1"
+                                : isCompleted
+                                ? "bg-yellow-50 dark:bg-[#1A1C1E] border-yellow-400 dark:border-yellow-600/50 border-b-yellow-500 dark:border-b-yellow-600/50"
+                                : "bg-gray-100 dark:bg-[#141517] border-gray-200 dark:border-[#2A2D30] border-b-gray-300 dark:border-b-black opacity-80 hover:opacity-100"
+                            }
+                          `}
                         >
-                          Day {level.day}
-                        </span>
-                        {isCompleted && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
-                        {isLocked && <Lock className="w-4 h-4 text-gray-400 dark:text-gray-600" />}
-                      </div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span
+                              className={`text-xs font-bold uppercase tracking-wider ${
+                                isActive ? "text-green-600 dark:text-[#96BF48]" : "text-gray-400 dark:text-gray-500"
+                              }`}
+                            >
+                              Day {level.day}
+                            </span>
+                            {isCompleted && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
+                          </div>
 
-                      <h3
-                        className={`text-lg font-bold transition-colors ${
-                          isActive
-                            ? "text-gray-900 dark:text-white"
-                            : isCompleted
-                            ? "text-gray-800 dark:text-gray-300"
-                            : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-200"
-                        }`}
+                          <h3
+                            className={`text-lg font-bold transition-colors ${
+                              isActive
+                                ? "text-gray-900 dark:text-white"
+                                : isCompleted
+                                ? "text-gray-800 dark:text-gray-300"
+                                : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-200"
+                            }`}
+                          >
+                            {level.title}
+                          </h3>
+
+                          {isActive && (
+                            <div className="absolute -right-2 -top-2 w-4 h-4 bg-green-500 dark:bg-[#96BF48] rounded-full animate-ping" />
+                          )}
+                        </div>
+                      </Link>
+                    ) : (
+                      <div
+                        className={`
+                          relative inline-block w-full max-w-[280px] p-4 rounded-2xl border-b-4 transition-all duration-300 group cursor-not-allowed
+                          bg-gray-100 dark:bg-[#141517] border-gray-200 dark:border-[#2A2D30] border-b-gray-300 dark:border-b-black opacity-80
+                        `}
                       >
-                        {level.title}
-                      </h3>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                            Day {level.day}
+                          </span>
+                          <Lock className="w-4 h-4 text-gray-400 dark:text-gray-600" />
+                        </div>
 
-                      {isActive && (
-                        <div className="absolute -right-2 -top-2 w-4 h-4 bg-green-500 dark:bg-[#96BF48] rounded-full animate-ping" />
-                      )}
-                    </div>
+                        <h3 className="text-lg font-bold transition-colors text-gray-400 dark:text-gray-500">
+                          {level.title}
+                        </h3>
+                      </div>
+                    )}
                   </div>
 
                   {/* CONNECTOR DOT */}

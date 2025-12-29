@@ -1,55 +1,60 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: Request) {
   try {
     const { userAnswer, standardAnswer } = await req.json();
 
-    // 1. Read Config
-    const apiKey = process.env.OPENAI_API_KEY;
-    const baseURL = process.env.OPENAI_BASE_URL;
-    const model = process.env.OPENAI_MODEL || "deepseek-chat";
+    if (!userAnswer || !standardAnswer) {
+      return NextResponse.json(
+        { error: "Missing required fields: userAnswer and standardAnswer" },
+        { status: 400 }
+      );
+    }
 
-    // Mock Fallback if no key is set
-    if (!apiKey || apiKey.startsWith("sk-placeholder")) {
-      console.log("Using Mock Mode (No API Key found)");
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
       return NextResponse.json({
-        score: 85,
-        feedback: "【模拟数据】API Key 未配置。请在 .env.local 中填入正确的 Key 以启用 DeepSeek AI。",
+        score: 0,
+        feedback: "Error: GEMINI_API_KEY is missing in .env.local",
         diff: [],
       });
     }
 
-    // 2. Initialize OpenAI Client (DeepSeek Compatible)
-    const openai = new OpenAI({
-      apiKey: apiKey,
-      baseURL: baseURL, // Critical for DeepSeek
+    const genAI = new GoogleGenerativeAI(apiKey);
+    // Use 'gemini-1.5-flash' for speed and cost efficiency
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: { responseMimeType: "application/json" },
     });
 
-    // 3. Call Real AI
-    const completion = await openai.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: `You are a strict IELTS Writing Tutor. 
-          Compare the User's Answer with the Standard Answer.
-          Return JSON format: { score: number, feedback: string, diff: any[] }`,
-        },
-        {
-          role: "user",
-          content: `Standard: "${standardAnswer}"\nUser: "${userAnswer}"`,
-        },
-      ],
-      model: model,
-      response_format: { type: "json_object" },
-    });
+    const prompt = `
+      You are a strict IELTS Writing Tutor.
+      Compare the Student's Answer with the Standard Answer.
+      
+      Standard Answer: "${standardAnswer}"
+      Student Answer: "${userAnswer}"
+      
+      Analyze based on:
+      1. Collocation: Did they use the key phrases?
+      2. Grammar & Accuracy.
+      
+      Output ONLY a JSON object with this structure:
+      {
+        "score": number (0-100),
+        "feedback": "string (concise advice)",
+        "diff": [] (leave empty for now as frontend handles visual diff)
+      }
+    `;
 
-    const content = completion.choices[0].message.content;
-    const result = JSON.parse(content || "{}");
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const jsonResponse = JSON.parse(text);
 
-    return NextResponse.json(result);
+    return NextResponse.json(jsonResponse);
   } catch (error) {
-    console.error("AI Error:", error);
-    return NextResponse.json({ error: "Failed to fetch AI response" }, { status: 500 });
+    console.error("Gemini API Error:", error);
+    return NextResponse.json({ error: "Failed to process with Gemini" }, { status: 500 });
   }
 }

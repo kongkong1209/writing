@@ -1,169 +1,55 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-// Mock response generator for fallback
-function generateMockResponse(userAnswer: string, standardAnswer: string) {
-  const userLower = userAnswer.toLowerCase().trim();
-  const standardLower = standardAnswer.toLowerCase().trim();
-
-  // Simple word matching
-  const userWords = userLower.split(/\s+/);
-  const standardWords = standardLower.split(/\s+/);
-  const commonWords = userWords.filter((word) => standardWords.includes(word));
-  const score = Math.round((commonWords.length / Math.max(userWords.length, standardWords.length)) * 100);
-
-  // Generate diff
-  const diff = standardWords.map((word) => {
-    const isInUser = userWords.includes(word);
-    return {
-      word,
-      status: isInUser ? ("correct" as const) : ("missing" as const),
-    };
-  });
-
-  // Generate feedback based on score
-  let feedback = "";
-  if (score >= 90) {
-    feedback = "Excellent! Your translation is very close to the model answer. Well done!";
-  } else if (score >= 70) {
-    feedback = "Good job! Your translation captures most of the key elements. Consider using more formal vocabulary and checking collocations.";
-  } else if (score >= 50) {
-    feedback = "Your translation has the right idea, but needs improvement. Focus on using the key collocations from the model answer and maintaining formal tone.";
-  } else {
-    feedback = "Your translation needs significant improvement. Review the model answer and pay attention to grammar structure and key vocabulary.";
-  }
-
-  return {
-    score,
-    feedback,
-    diff,
-  };
-}
-
-export async function POST(request: NextRequest) {
-  // Read body once at the start
-  let body: any;
+export async function POST(req: Request) {
   try {
-    body = await request.json();
-  } catch (parseError) {
-    return NextResponse.json(
-      { error: "Invalid JSON in request body" },
-      { status: 400 }
-    );
-  }
+    const { userAnswer, standardAnswer } = await req.json();
 
-  const { userAnswer, standardAnswer, context } = body;
-
-  try {
-
-    if (!userAnswer || !standardAnswer) {
-      return NextResponse.json(
-        { error: "Missing required fields: userAnswer and standardAnswer" },
-        { status: 400 }
-      );
-    }
-
-    // Check if OpenAI API key is configured
+    // 1. Read Config
     const apiKey = process.env.OPENAI_API_KEY;
+    const baseURL = process.env.OPENAI_BASE_URL;
+    const model = process.env.OPENAI_MODEL || "deepseek-chat";
 
-    if (!apiKey) {
-      // Return mock response if no API key
-      console.log("OpenAI API key not found, using mock response");
-      const mockResponse = generateMockResponse(userAnswer, standardAnswer);
-      return NextResponse.json(mockResponse);
+    // Mock Fallback if no key is set
+    if (!apiKey || apiKey.startsWith("sk-placeholder")) {
+      console.log("Using Mock Mode (No API Key found)");
+      return NextResponse.json({
+        score: 85,
+        feedback: "【模拟数据】API Key 未配置。请在 .env.local 中填入正确的 Key 以启用 DeepSeek AI。",
+        diff: [],
+      });
     }
 
-    // Use OpenAI API
-    const openai = new OpenAI({ apiKey });
+    // 2. Initialize OpenAI Client (DeepSeek Compatible)
+    const openai = new OpenAI({
+      apiKey: apiKey,
+      baseURL: baseURL, // Critical for DeepSeek
+    });
 
-    const prompt = `You are a strict IELTS Writing Tutor. Compare the student's sentence with the Model Answer.
-
-Model Answer: "${standardAnswer}"
-Student's Answer: "${userAnswer}"
-${context ? `Context/Topic: ${context}` : ""}
-
-Please analyze the student's answer and provide:
-1. **Collocation Check**: Did they use the key phrases from the model answer?
-2. **Grammar & Tone**: Is it formal enough for IELTS Writing?
-3. **Accuracy**: How close is it to the model answer?
-
-Output your response as a JSON object with this exact structure:
-{
-  "score": <number between 0-100>,
-  "feedback": "<detailed feedback string in English, explaining what's good and what needs improvement>",
-  "diff": [
-    {
-      "word": "<word from model answer>",
-      "status": "correct" | "wrong" | "missing"
-    }
-  ]
-}
-
-The "diff" array should contain all significant words/phrases from the model answer, marking them as:
-- "correct": if the student used a similar/equivalent word
-- "wrong": if the student used a different word that changes meaning
-- "missing": if the student didn't include this word/phrase
-
-Be strict but fair. Focus on IELTS Writing standards.`;
-
+    // 3. Call Real AI
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content:
-            "You are an expert IELTS Writing tutor. Always respond with valid JSON only, no additional text.",
+          content: `You are a strict IELTS Writing Tutor. 
+          Compare the User's Answer with the Standard Answer.
+          Return JSON format: { score: number, feedback: string, diff: any[] }`,
         },
         {
           role: "user",
-          content: prompt,
+          content: `Standard: "${standardAnswer}"\nUser: "${userAnswer}"`,
         },
       ],
-      temperature: 0.3,
+      model: model,
       response_format: { type: "json_object" },
     });
 
-    const responseContent = completion.choices[0]?.message?.content;
-    if (!responseContent) {
-      throw new Error("No response from OpenAI");
-    }
+    const content = completion.choices[0].message.content;
+    const result = JSON.parse(content || "{}");
 
-    // Parse JSON response
-    let aiResponse;
-    try {
-      aiResponse = JSON.parse(responseContent);
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
-      // Fallback to mock response
-      return NextResponse.json(generateMockResponse(userAnswer, standardAnswer));
-    }
-
-    // Validate response structure
-    if (!aiResponse.score || !aiResponse.feedback) {
-      console.error("Invalid AI response structure:", aiResponse);
-      return NextResponse.json(generateMockResponse(userAnswer, standardAnswer));
-    }
-
-    return NextResponse.json({
-      score: aiResponse.score,
-      feedback: aiResponse.feedback,
-      diff: aiResponse.diff || [],
-    });
-  } catch (error: any) {
-    console.error("Error in check-answer API:", error);
-
-    // Use already parsed body for fallback
-    if (body?.userAnswer && body?.standardAnswer) {
-      return NextResponse.json(generateMockResponse(body.userAnswer, body.standardAnswer));
-    }
-
-    return NextResponse.json(
-      {
-        error: "Internal server error",
-        message: error.message || "Unknown error occurred",
-      },
-      { status: 500 }
-    );
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("AI Error:", error);
+    return NextResponse.json({ error: "Failed to fetch AI response" }, { status: 500 });
   }
 }
-

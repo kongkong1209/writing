@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "./Button";
 import BentoCard from "./BentoCard";
-import { Check, RotateCcw, CheckCircle2, Loader2, Sparkles } from "lucide-react";
-import { checkAnswerWithAI } from "@/lib/ai-service";
+import { Check, RotateCcw, CheckCircle2, Loader2, Sparkles, Wand2 } from "lucide-react";
+import { checkAnswerWithAI, generateSimilarQuestion } from "@/lib/ai-service";
 
 interface GrammarCardProps {
   chinese: string;
@@ -20,9 +20,22 @@ export default function GrammarCard({
   explanation,
   className = "",
 }: GrammarCardProps) {
+  // Internal state for current question (can be updated by "Generate Similar")
+  const [currentChinese, setCurrentChinese] = useState(chinese);
+  const [currentEnglish, setCurrentEnglish] = useState(english);
+  const [currentExplanation, setCurrentExplanation] = useState(explanation);
+
+  // Sync with props when they change
+  useEffect(() => {
+    setCurrentChinese(chinese);
+    setCurrentEnglish(english);
+    setCurrentExplanation(explanation);
+  }, [chinese, english, explanation]);
+
   const [userInput, setUserInput] = useState("");
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // AI Response State
   const [aiResult, setAiResult] = useState<{
@@ -41,14 +54,14 @@ export default function GrammarCard({
 
     try {
       // Call the AI API
-      const result = await checkAnswerWithAI(userInput, english, explanation);
+      const result = await checkAnswerWithAI(userInput, currentEnglish, currentExplanation);
       setAiResult(result);
       setIsFlipped(true);
     } catch (error) {
       console.error("Error checking answer:", error);
       // Fallback to simple comparison if AI fails
       const userLower = userInput.toLowerCase().trim();
-      const englishLower = english.toLowerCase().trim();
+      const englishLower = currentEnglish.toLowerCase().trim();
       const isCorrect = userLower === englishLower;
       
       setAiResult({
@@ -68,6 +81,39 @@ export default function GrammarCard({
     setUserInput("");
     setIsFlipped(false);
     setAiResult(null);
+  };
+
+  const handleGenerateSimilar = async () => {
+    if (isGenerating) return;
+
+    setIsGenerating(true);
+    try {
+      // Extract topic from current question (simple extraction)
+      const topic = currentExplanation || "IELTS Writing";
+      
+      // Call the generate API
+      const newQuestion = await generateSimilarQuestion(
+        currentChinese,
+        currentEnglish,
+        topic
+      );
+
+      if (newQuestion) {
+        // Update the current question
+        setCurrentChinese(newQuestion.chinese);
+        setCurrentEnglish(newQuestion.standardEnglish);
+        setCurrentExplanation(newQuestion.explanation || currentExplanation);
+        
+        // Reset the card to input state
+        setUserInput("");
+        setIsFlipped(false);
+        setAiResult(null);
+      }
+    } catch (error) {
+      console.error("Error generating similar question:", error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const score = aiResult?.score || 0;
@@ -93,7 +139,7 @@ export default function GrammarCard({
                       <span>中文句子</span>
                     </h4>
                     <p className="text-lg text-text-primary leading-relaxed bg-surface/50 rounded-lg p-4 border border-border">
-                      {chinese}
+                      {currentChinese}
                     </p>
                   </div>
 
@@ -182,10 +228,10 @@ export default function GrammarCard({
                       标准答案
                     </div>
                     <p className="text-lg text-text-primary leading-relaxed font-medium bg-background border border-border rounded-lg p-4">
-                      {english}
+                      {currentEnglish}
                     </p>
                     <div className="text-sm text-text-secondary leading-relaxed mt-3 pt-3 border-t border-border">
-                      {explanation}
+                      {currentExplanation}
                     </div>
                   </div>
 
@@ -254,12 +300,29 @@ export default function GrammarCard({
                   {/* Action Buttons */}
                   <div className="pt-2 space-y-2">
                     <Button
+                      onClick={handleGenerateSimilar}
+                      disabled={isGenerating}
+                      className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          AI 生成中...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-4 h-4" />
+                          练习相似题目 / Practice Similar Question
+                        </>
+                      )}
+                    </Button>
+                    <Button
                       onClick={handleReset}
                       variant="secondary"
                       className="w-full flex items-center justify-center gap-2"
                     >
                       <RotateCcw className="w-4 h-4" />
-                      重新练习
+                      重新练习当前题目
                     </Button>
                   </div>
                 </div>

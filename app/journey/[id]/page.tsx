@@ -6,12 +6,27 @@ import GrammarCard from "@/components/ui/GrammarCard";
 import Button from "@/components/ui/Button";
 import { ArrowLeft, BookOpen, Lightbulb } from "lucide-react";
 import { motion } from "framer-motion";
+import { saveLevelComplete } from "@/lib/progress";
 
 export default function LevelPage() {
   const params = useParams();
   const router = useRouter();
   const id = Number(params.id);
   const level = levelsData[id];
+
+  const handleLevelPass = () => {
+    // 1. Save Progress
+    saveLevelComplete(id);
+
+    // 2. Show success message (you can replace with a toast library later)
+    // For now, we'll use a simple approach - you can enhance this with a toast notification
+    console.log(`🎉 Congratulations! Day ${id} Completed. Next level unlocked!`);
+
+    // 3. Navigate back to map to see the new unlocked level
+    setTimeout(() => {
+      router.push("/journey");
+    }, 1000); // Small delay to show the completion state
+  };
 
   if (!level) {
     return (
@@ -94,7 +109,7 @@ export default function LevelPage() {
           <div className="mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Practical Challenge</h2>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Translate the sentence using the vocab above.
+              Translate the sentence using the vocab above. Maintain a streak of 3 to unlock the next level.
             </p>
           </div>
 
@@ -102,6 +117,7 @@ export default function LevelPage() {
             chinese={level.challenge.chinese}
             english={level.challenge.standardEnglish}
             explanation={level.challenge.tips}
+            onPass={handleLevelPass}
           />
         </motion.div>
       </div>

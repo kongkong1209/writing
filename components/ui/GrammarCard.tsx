@@ -12,7 +12,7 @@ interface GrammarCardProps {
   english: string;
   explanation: string;
   className?: string;
-  onPass?: () => void; // Parent callback when mastered
+  onPass?: () => void;
 }
 
 export default function GrammarCard({
@@ -22,7 +22,7 @@ export default function GrammarCard({
   className = "",
   onPass,
 }: GrammarCardProps) {
-  // Content State (Dynamic for Practice Loop)
+  // Content State
   const [content, setContent] = useState({
     chinese: initialChinese,
     english: initialEnglish,
@@ -43,12 +43,12 @@ export default function GrammarCard({
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Game State - Streak Mastery Logic
+  // Game State
   const [streak, setStreak] = useState(0);
   const TARGET_STREAK = 3;
   const [isMastered, setIsMastered] = useState(false);
 
-  // AI Response State
+  // AI Result
   const [aiResult, setAiResult] = useState<{
     score: number;
     feedback: string;
@@ -60,11 +60,10 @@ export default function GrammarCard({
 
   const handleCheck = async () => {
     if (!userInput.trim() || isLoading) return;
-
     setIsLoading(true);
 
     try {
-      // Call the AI API
+      // Call AI
       const result = await checkAnswerWithAI(userInput, content.english, content.explanation);
       setAiResult(result);
 
@@ -72,11 +71,8 @@ export default function GrammarCard({
       if (result.score >= 80) {
         const newStreak = streak + 1;
         setStreak(newStreak);
-        if (newStreak >= TARGET_STREAK) {
-          setIsMastered(true);
-        }
+        if (newStreak >= TARGET_STREAK) setIsMastered(true);
       } else {
-        // Reset streak on failure
         setStreak(0);
         setIsMastered(false);
       }
@@ -102,9 +98,7 @@ export default function GrammarCard({
       if (fallbackScore >= 80) {
         const newStreak = streak + 1;
         setStreak(newStreak);
-        if (newStreak >= TARGET_STREAK) {
-          setIsMastered(true);
-        }
+        if (newStreak >= TARGET_STREAK) setIsMastered(true);
       } else {
         setStreak(0);
         setIsMastered(false);
@@ -117,36 +111,25 @@ export default function GrammarCard({
   };
 
   const handleNextQuestion = async () => {
-    // If mastered, trigger Pass callback
     if (isMastered) {
-      if (onPass) {
-        onPass();
-      }
+      if (onPass) onPass();
       return;
     }
 
-    // Otherwise, Generate Similar Question
     setIsGenerating(true);
     try {
       const topic = content.explanation || "IELTS Writing";
-      const newQuestion = await generateSimilarQuestion(
-        content.chinese,
-        content.english,
-        topic
-      );
+      const newQ = await generateSimilarQuestion(content.chinese, content.english, topic);
 
-      if (newQuestion) {
-        // Update the current question
+      if (newQ) {
         setContent({
-          chinese: newQuestion.chinese,
-          english: newQuestion.standardEnglish,
-          explanation: newQuestion.explanation || content.explanation,
+          chinese: newQ.chinese,
+          english: newQ.standardEnglish,
+          explanation: newQ.explanation || content.explanation,
         });
-
-        // Reset the card to input state (but keep streak!)
         setUserInput("");
-        setIsFlipped(false);
         setAiResult(null);
+        setIsFlipped(false);
       }
     } catch (error) {
       console.error("Error generating similar question:", error);
@@ -159,7 +142,7 @@ export default function GrammarCard({
     setUserInput("");
     setIsFlipped(false);
     setAiResult(null);
-    // Note: We keep streak and isMastered on reset (user can continue practicing)
+    // Note: We keep streak and isMastered on reset
   };
 
   const score = aiResult?.score || 0;
@@ -168,43 +151,9 @@ export default function GrammarCard({
   return (
     <div className={className}>
       <div className="relative perspective-1000" style={{ minHeight: "500px" }}>
-        {/* Mastery Progress Header (Visible on both sides) */}
-        <div className="absolute -top-14 left-0 right-0 flex flex-col items-center gap-2 mb-4">
-          <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-            掌握进度 / Mastery Streak
-          </span>
-          <div className="flex items-center gap-2">
-            {[...Array(TARGET_STREAK)].map((_, i) => (
-              <motion.div
-                key={i}
-                initial={false}
-                animate={{
-                  scale: i < streak ? [1, 1.2, 1] : 1,
-                  opacity: i < streak ? 1 : 0.4,
-                }}
-                transition={{
-                  scale: { duration: 0.3, delay: i * 0.1 },
-                }}
-                className="transition-colors"
-              >
-                <Flame
-                  className={`w-6 h-6 ${
-                    i < streak
-                      ? "text-orange-500 fill-orange-500"
-                      : "text-text-muted fill-text-muted"
-                  }`}
-                />
-              </motion.div>
-            ))}
-            <span className="text-sm font-bold text-text-primary ml-2">
-              ({streak}/{TARGET_STREAK})
-            </span>
-          </div>
-        </div>
-
         <AnimatePresence mode="wait">
           {!isFlipped ? (
-            // Front Side - Input State
+            // ================= FRONT SIDE =================
             <motion.div
               key="front"
               initial={{ rotateY: 0, opacity: 1 }}
@@ -213,22 +162,46 @@ export default function GrammarCard({
               style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
               className="h-full"
             >
-              <BentoCard className="p-6 h-full flex flex-col justify-between min-h-[450px]">
-                <div className="space-y-4">
+              <BentoCard className="p-6 h-full flex flex-col justify-between min-h-[500px]">
+                <div className="space-y-6">
+                  {/* HEADER: Title + Streak Icons (Integrated) */}
+                  <div className="flex justify-between items-start border-b border-border pb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-text-secondary uppercase tracking-wider">
+                        Current Challenge
+                      </h4>
+                      <p className="text-xs text-text-muted mt-1">
+                        Translate to clear the level ({streak}/{TARGET_STREAK})
+                      </p>
+                    </div>
+                    {/* The Flames are now INSIDE the card, aligned to the right */}
+                    <div className="flex gap-1 bg-surface/50 p-2 rounded-lg border border-border">
+                      {[...Array(TARGET_STREAK)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ scale: i < streak ? 1.1 : 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Flame
+                            className={`w-5 h-5 ${
+                              i < streak
+                                ? "fill-orange-500 text-orange-500"
+                                : "text-text-muted fill-text-muted"
+                            }`}
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* QUESTION CONTENT */}
                   <div>
-                    <h4 className="text-sm font-medium text-text-secondary mb-2 flex items-center gap-2">
-                      <span>中文句子</span>
-                      {streak > 0 && (
-                        <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
-                          连击 {streak}
-                        </span>
-                      )}
-                    </h4>
-                    <p className="text-lg text-text-primary leading-relaxed bg-surface/50 rounded-lg p-4 border border-border">
+                    <p className="text-xl font-medium text-text-primary leading-relaxed">
                       {content.chinese}
                     </p>
                   </div>
 
+                  {/* INPUT AREA */}
                   <div>
                     <label className="text-sm font-medium text-text-secondary mb-2 block">
                       请翻译成英文
@@ -237,10 +210,7 @@ export default function GrammarCard({
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
                       placeholder="在这里输入你的翻译..."
-                      className="w-full min-h-[150px] bg-background border border-border rounded-lg p-4
-                                 text-text-primary placeholder-text-muted
-                                 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20
-                                 transition-all duration-200 resize-none font-mono text-sm"
+                      className="w-full h-32 bg-background border border-border rounded-xl p-4 text-text-primary placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                       disabled={isLoading}
                       autoFocus
                     />
@@ -248,37 +218,35 @@ export default function GrammarCard({
                       字数: {userInput.length}
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex items-center gap-3 pt-2">
-                    <Button
-                      onClick={handleCheck}
-                      disabled={!userInput.trim() || isLoading}
-                      className="flex-1 flex items-center justify-center gap-2"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          AI 分析中...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4" />
-                          提交 / Check with AI
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  <div className="text-xs text-text-muted text-center pt-2 border-t border-border">
-                    {isLoading
-                      ? "AI 正在分析你的答案..."
-                      : `需要连续 ${TARGET_STREAK} 次得分 ≥80 才能通过`}
+                {/* SUBMIT BUTTON */}
+                <div className="pt-4">
+                  <Button
+                    onClick={handleCheck}
+                    disabled={!userInput.trim() || isLoading}
+                    className="w-full py-4 bg-primary hover:bg-primary-hover text-black font-bold flex justify-center items-center gap-2 text-base transition-all"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="animate-spin w-5 h-5" />
+                        AI 分析中...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-5 h-5" />
+                        提交 / Submit Answer
+                      </>
+                    )}
+                  </Button>
+                  <div className="text-xs text-text-muted text-center mt-2 pt-2 border-t border-border">
+                    需要连续 {TARGET_STREAK} 次得分 ≥80 才能通过
                   </div>
                 </div>
               </BentoCard>
             </motion.div>
           ) : (
-            // Back Side - Result State
+            // ================= BACK SIDE =================
             <motion.div
               key="back"
               initial={{ rotateY: 180, opacity: 0 }}
@@ -288,18 +256,18 @@ export default function GrammarCard({
               className="h-full"
             >
               <BentoCard
-                className={`p-6 h-full flex flex-col justify-between min-h-[450px] border-2 ${
+                className={`p-6 h-full flex flex-col justify-between min-h-[500px] border-2 ${
                   isPassingScore
                     ? "bg-primary/10 border-primary/50"
                     : "bg-red-500/10 border-red-500/30"
                 }`}
               >
-                <div className="space-y-5">
-                  {/* Result Header */}
-                  <div className="flex items-center justify-between border-b border-border pb-4">
-                    <div className="flex items-center gap-3">
+                <div className="space-y-6">
+                  {/* RESULT HEADER */}
+                  <div className="flex justify-between items-center pb-4 border-b border-border">
+                    <div>
                       <div
-                        className={`text-4xl font-black ${
+                        className={`text-5xl font-black ${
                           isPassingScore
                             ? "text-primary"
                             : score >= 60
@@ -309,25 +277,21 @@ export default function GrammarCard({
                       >
                         {score}
                       </div>
-                      <div className="text-xs text-text-secondary uppercase tracking-wider font-semibold">
+                      <div className="text-xs text-text-secondary font-bold uppercase tracking-wider mt-1">
                         AI 评分
                       </div>
                     </div>
 
-                    {/* Streak Feedback */}
                     <div className="text-right">
                       {isPassingScore ? (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="flex items-center gap-1 text-orange-400 font-bold"
-                        >
-                          <Flame className="w-5 h-5 fill-orange-400" />
-                          <span>连击 +1</span>
-                        </motion.div>
+                        <div className="bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                          <div className="flex items-center gap-1 text-primary font-bold">
+                            <Flame className="w-4 h-4 fill-primary" /> +1 连击
+                          </div>
+                        </div>
                       ) : (
-                        <div className="text-red-400 font-bold text-sm">
-                          连击重置 😢
+                        <div className="bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+                          <div className="text-red-400 font-bold text-sm">连击重置 😢</div>
                         </div>
                       )}
                     </div>
@@ -350,20 +314,18 @@ export default function GrammarCard({
                     </motion.div>
                   )}
 
-                  {/* Standard Answer */}
-                  <div>
-                    <div className="text-xs text-primary font-bold uppercase mb-2 flex items-center gap-2">
+                  {/* STANDARD ANSWER */}
+                  <div className="bg-background/50 p-4 rounded-xl border border-border">
+                    <div className="text-xs text-primary font-bold uppercase tracking-wider mb-2">
                       标准答案
                     </div>
-                    <p className="text-lg text-text-primary leading-relaxed font-medium bg-background border border-border rounded-lg p-4">
-                      {content.english}
-                    </p>
+                    <div className="text-primary font-medium leading-relaxed">{content.english}</div>
                     <div className="text-sm text-text-secondary leading-relaxed mt-3 pt-3 border-t border-border">
                       {content.explanation}
                     </div>
                   </div>
 
-                  {/* User's Answer */}
+                  {/* USER'S ANSWER */}
                   <div className="bg-surface border border-border rounded-lg p-4">
                     <div className="text-xs text-text-secondary mb-2">你的答案</div>
                     <div
@@ -379,7 +341,7 @@ export default function GrammarCard({
                     </div>
                   </div>
 
-                  {/* AI Feedback Box */}
+                  {/* FEEDBACK */}
                   {aiResult && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
@@ -426,12 +388,12 @@ export default function GrammarCard({
                   )}
                 </div>
 
-                {/* Footer Actions */}
-                <div className="mt-4 pt-4 border-t border-border space-y-2">
+                {/* FOOTER ACTIONS */}
+                <div className="pt-4 space-y-2">
                   {isMastered ? (
                     <Button
                       onClick={handleNextQuestion}
-                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-4 text-lg shadow-[0_0_20px_rgba(234,179,8,0.3)] flex items-center justify-center gap-2"
+                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-4 text-lg shadow-[0_0_20px_rgba(234,179,8,0.3)] transition-all flex items-center justify-center gap-2"
                     >
                       <Trophy className="w-6 h-6" />
                       完成关卡 / Complete Level
@@ -441,19 +403,17 @@ export default function GrammarCard({
                       <Button
                         onClick={handleNextQuestion}
                         disabled={isGenerating}
-                        className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover"
+                        className="w-full border border-border hover:bg-surface-hover hover:border-primary/50 py-4 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center gap-2"
                       >
                         {isGenerating ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="animate-spin w-4 h-4" />
                             AI 生成中...
                           </>
                         ) : (
                           <>
                             <Sparkles className="w-4 h-4" />
-                            {isPassingScore
-                              ? "保持连击！下一题"
-                              : "再试一次 / Try Another One"}
+                            {isPassingScore ? "保持连击！下一题" : "再试一次 / Try Another One"}
                             <ArrowRight className="w-4 h-4" />
                           </>
                         )}
